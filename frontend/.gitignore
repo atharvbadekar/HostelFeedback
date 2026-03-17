@@ -4,8 +4,10 @@ client/node_modules/
 server/node_modules/
 
 # Environment variables (Crucial for security!)
+node_modules/
 .env
-server/.env
+backend/.env
+frontend/.env
 
 # Debug logs
 npm-debug.log*

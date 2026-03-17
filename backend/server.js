@@ -4,9 +4,13 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const axios = require('axios'); // Add this line here
 
 const app = express();
-app.use(cors());
+app.use(cors({
+    origin: "*", // This allows any website to talk to your backend (best for testing)
+    methods: ["GET", "POST"]
+  }));
 app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET || "7MBg44K336q8J1pWCCGjFMYOOikFa6Si8id5eLkIrcC";
@@ -109,36 +113,83 @@ app.get('/api/hostel/:id', protect, async (req, res) => {
 
 app.get('/api/student/:collegeId', async (req, res) => {
     try {
+        // .trim() removes any accidental spaces from the input
+        const idFromUser = req.params.collegeId.trim();
+
+        // Use a Case-Insensitive search (the 'i' flag)
         const student = await Student.findOne({ 
-            collegeId: { $regex: new RegExp("^" + req.params.collegeId.trim() + "$", "i") } 
+            collegeId: { $regex: new RegExp("^" + idFromUser + "$", "i") } 
         });
-        if (!student) return res.status(404).json({ error: "Student not found" });
+
+        if (!student) {
+            console.log(`❌ Search failed for: "${idFromUser}"`);
+            return res.status(404).json({ error: "Student not found" });
+        }
+
         res.json(student);
-    } catch (err) { res.status(500).json({ error: "Server error" }); }
+    } catch (err) {
+        res.status(500).json({ error: "Server error" });
+    }
 });
 
 app.post('/api/student/send-otp', async (req, res) => {
     try {
         const { collegeId } = req.body;
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        const student = await Student.findOneAndUpdate({ collegeId }, { otp }, { new: true });
-        if (!student) return res.status(404).json({ error: "Student not found" });
+        const student = await Student.findOne({ collegeId });
 
-        // INSTEAD OF SMS: We print it to the terminal
-        console.log(`------------------------------------------`);
-        console.log(`🔑 LOCAL OTP FOR ${student.name}: ${otp}`);
-        console.log(`------------------------------------------`);
-        
-        res.json({ message: "OTP generated (Check terminal)" });
-    } catch (err) { res.status(500).json({ error: "OTP failed" }); }
+        if (!student || !student.mobile) {
+            return res.status(404).json({ error: "Student or mobile number not found" });
+        }
+
+        // 1. Clean the number (Must be 10 digits)
+        const cleanMobile = student.mobile.toString().replace(/\D/g, '').slice(-10);
+
+        // 2. Generate OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        student.otp = otp;
+        await student.save();
+
+        // 3. The "Exact Fix": Use URLSearchParams for clean encoding
+        const params = new URLSearchParams({
+            authorization: process.env.FAST2SMS_API_KEY,
+            route: 'q',
+            message: `Your CURAJ OTP is ${otp}`,
+            language: 'english',
+            flash: '0',
+            numbers: cleanMobile
+        });
+
+        const url = `https://www.fast2sms.com/dev/bulkV2?${params.toString()}`;
+
+        // 4. Hit the API
+        const response = await axios.get(url);
+
+        if (response.data.return) {
+            console.log(`✅ Success! OTP ${otp} sent to ${cleanMobile}`);
+            res.json({ message: "OTP sent successfully!" });
+        } else {
+            console.log("❌ Gateway Rejected:", response.data);
+            res.status(400).json({ error: response.data.message });
+        }
+
+    } catch (err) {
+        console.error("--- BACKEND ERROR ---");
+        // Check if the error is from Fast2SMS or your own code
+        if (err.response) {
+            console.error("Fast2SMS Response Error:", err.response.data);
+            return res.status(400).json({ error: err.response.data.message });
+        }
+        console.error("System Error:", err.message);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
 });
 
 app.post('/api/student/verify-otp', async (req, res) => {
     const { collegeId, otp } = req.body;
     const student = await Student.findOne({ collegeId, otp });
+
     if (student) {
-        student.otp = null; 
+        student.otp = null; // Clear it so it can't be reused
         await student.save();
         res.json({ success: true });
     } else {

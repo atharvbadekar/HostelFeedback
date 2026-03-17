@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { User, KeyRound, Star, Send, CheckCircle2, ChevronRight } from 'lucide-react';
 
+const API_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://your-backend-name.onrender.com' // You will get this link from Render.com
+  : 'http://localhost:5000';
+
 const StudentFeedback = () => {
   const [step, setStep] = useState(1);
   const [collegeId, setCollegeId] = useState('');
@@ -21,19 +25,23 @@ const StudentFeedback = () => {
   // Step 1: Request OTP
   const handleRequestOTP = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/student/${collegeId}`);
+      // 1. Find student first to show their name
+      const res = await axios.get(`${API_URL}/api/student/${collegeId}`);
       setStudentName(res.data.name);
-      await axios.post('http://localhost:5000/api/student/send-otp', { collegeId });
-      setStep(2);
+  
+      // 2. Trigger the real SMS
+      await axios.post('${API_URL}/api/student/send-otp', { collegeId });
+      
+      setStep(2); // Move to OTP input screen
     } catch (err) {
-      alert("Student ID not found. Please check and try again.");
+      alert("Error: " + (err.response?.data?.error || "Connection failed"));
     }
   };
 
   // Step 2: Verify OTP
   const handleVerifyOTP = async () => {
     try {
-      const res = await axios.post('http://localhost:5000/api/student/verify-otp', { collegeId, otp });
+      const res = await axios.post('${API_URL}/api/student/verify-otp', { collegeId, otp });
       if (res.data.success) setStep(3);
     } catch (err) {
       alert("Invalid OTP. Check your terminal/console.");
@@ -43,7 +51,7 @@ const StudentFeedback = () => {
   // Step 3: Submit Feedback
   const handleSubmit = async () => {
     try {
-      await axios.post('http://localhost:5000/api/student/submit-feedback', { collegeId, answers, comments });
+      await axios.post('${API_URL}/api/student/submit-feedback', { collegeId, answers, comments });
       setStep(4);
     } catch (err) {
       alert("Submission failed.");
