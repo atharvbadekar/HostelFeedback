@@ -5,6 +5,19 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const axios = require('axios'); // Add this line here
+const seedAdmin = async () => {
+    const adminExists = await User.findOne({ role: 'admin' });
+    if (!adminExists) {
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      await User.create({
+        username: 'admin',
+        password: hashedPassword,
+        role: 'admin'
+      });
+      console.log("✅ Default Admin Created: user: admin, pass: admin123");
+    }
+  };
+  seedAdmin();
 
 const app = express();
 app.use(cors({
