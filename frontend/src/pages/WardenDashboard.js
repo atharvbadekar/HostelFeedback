@@ -5,54 +5,76 @@ import axios from 'axios';
 const WardenDashboard = ({ hostelId, onLogout }) => {
     const [students, setStudents] = useState([]);
     const [view, setView] = useState('list'); // 'list' or 'feedback'
+    const [loading, setLoading] = useState(true);
 
+    const API_URL = process.env.NODE_ENV === 'production' 
+        ? 'https://hostelfeedback.onrender.com' 
+        : 'http://localhost:5000';
+
+    // Fetch Student & Feedback data
     useEffect(() => {
         const fetchData = async () => {
-            const token = localStorage.getItem('token');
             try {
-                const res = await axios.get(`http://localhost:5000/api/hostel/${hostelId}`, {
+                const token = localStorage.getItem('token');
+                // We fetch all students; the backend should return feedback status inside the student object
+                const res = await axios.get(`${API_URL}/api/admin/students`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setStudents(res.data);
             } catch (err) {
-                console.error("Unauthorized Access Detected");
+                console.error("Failed to fetch data:", err);
+            } finally {
+                setLoading(false);
             }
         };
         fetchData();
-    }, [hostelId]);
+    }, [API_URL]);
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
+        if (!file) return;
+
         const reader = new FileReader();
         reader.onload = async (event) => {
             const text = event.target.result;
-            // Simplified CSV Parser
             const lines = text.split('\n');
             const headers = lines[0].split(',').map(h => h.trim());
-            const jsonData = lines.slice(1).map(line => {
-                const values = line.split(',').map(v => v.trim());
-                return headers.reduce((obj, header, i) => {
-                    obj[header] = values[i];
-                    return obj;
-                }, {});
-            }).filter(row => row.collegeId);
+            
+            const jsonData = lines.slice(1)
+                .map(line => {
+                    const values = line.split(',').map(v => v.trim());
+                    if (values.length < headers.length) return null;
+                    return headers.reduce((obj, header, i) => {
+                        obj[header] = values[i];
+                        return obj;
+                    }, {});
+                })
+                .filter(row => row && row.collegeId);
 
             try {
-                await axios.post('http://localhost:5000/api/warden/upload', {
+                const token = localStorage.getItem('token');
+                // FIXED: Changed localhost to API_URL and added Auth headers
+                await axios.post(`${API_URL}/api/warden/upload`, {
                     students: jsonData,
                     hostelId: hostelId
+                }, {
+                    headers: { Authorization: `Bearer ${token}` }
                 });
+                
                 alert("Upload Success!");
                 window.location.reload();
             } catch (err) {
-                alert("Upload Failed.");
+                console.error(err);
+                alert("Upload Failed. Check console for details.");
             }
         };
         reader.readAsText(file);
     };
 
+    if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-500">Loading Dashboard...</div>;
+
     return (
-        <div className="min-h-screen bg-slate-50 p-6 md:p-10">
+        <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-8 flex justify-between items-center">
@@ -61,8 +83,8 @@ const WardenDashboard = ({ hostelId, onLogout }) => {
                             <ShieldCheck />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-slate-900">Hostel {hostelId} Warden</h1>
-                            <p className="text-slate-500 text-sm font-medium">Management & Feedback Portal</p>
+                            <h1 className="text-2xl font-bold text-slate-900">Hostel {hostelId || 'Management'}</h1>
+                            <p className="text-slate-500 text-sm font-medium">Warden Administration Portal</p>
                         </div>
                     </div>
                     <button onClick={onLogout} className="flex items-center gap-2 px-5 py-2.5 bg-rose-50 text-rose-600 rounded-xl font-bold text-sm hover:bg-rose-100 transition-all">
@@ -70,7 +92,7 @@ const WardenDashboard = ({ hostelId, onLogout }) => {
                     </button>
                 </div>
 
-                {/* Dashboard Stats & Upload */}
+                {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
                         <div className="flex items-center gap-3 mb-4">
@@ -96,7 +118,7 @@ const WardenDashboard = ({ hostelId, onLogout }) => {
                     </div>
                 </div>
 
-                {/* --- Tab Navigation --- */}
+                {/* Tab Navigation */}
                 <div className="flex gap-4 mb-6">
                     <button 
                         onClick={() => setView('list')}
@@ -112,73 +134,75 @@ const WardenDashboard = ({ hostelId, onLogout }) => {
                     </button>
                 </div>
 
-                {/* --- Content Area --- */}
+                {/* Content Area */}
                 <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
                     {view === 'list' ? (
-                        <table className="w-full text-left">
-                            <thead className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                                <tr>
-                                    <th className="px-8 py-5">Student Name</th>
-                                    <th className="px-8 py-4">College ID</th>
-                                    <th className="px-8 py-4">Contact Info</th>
-                                    <th className="px-8 py-4 text-center">Form Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {students.map((s, i) => (
-                                    <tr key={i} className="hover:bg-slate-50/50">
-                                        <td className="px-8 py-4 font-bold text-slate-700">{s.name}</td>
-                                        <td className="px-8 py-4 text-slate-500 font-mono text-xs">{s.collegeId}</td>
-                                        <td className="px-8 py-4 text-slate-500 text-sm">{s.email}</td>
-                                        <td className="px-8 py-4 text-center">
-                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black ${s.feedback?.isSubmitted ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-                                                {s.feedback?.isSubmitted ? 'SUBMITTED' : 'PENDING'}
-                                            </span>
-                                        </td>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                                    <tr>
+                                        <th className="px-8 py-5">Student Name</th>
+                                        <th className="px-8 py-4">College ID</th>
+                                        <th className="px-8 py-4 text-center">Status</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    ) : (
-                        <table className="w-full text-left">
-                            <thead className="bg-indigo-50/50 text-indigo-400 text-[10px] font-black uppercase tracking-widest">
-                                <tr>
-                                    <th className="px-8 py-5">Student</th>
-                                    <th className="px-8 py-4 text-center">Average Rating</th>
-                                    <th className="px-8 py-4">Latest Comments</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {students.filter(s => s.feedback?.isSubmitted).length > 0 ? (
-                                    students.filter(s => s.feedback?.isSubmitted).map((s, i) => (
-                                        <tr key={i}>
-                                            <td className="px-8 py-5">
-                                                <p className="font-bold text-slate-800">{s.name}</p>
-                                                <p className="text-xs text-slate-400">{s.collegeId}</p>
-                                            </td>
-                                            <td className="px-8 py-4">
-                                                <div className="flex items-center justify-center gap-2 bg-indigo-50 text-indigo-600 w-16 mx-auto py-1 rounded-lg font-black">
-                                                    <Star size={14} fill="currentColor" />
-                                                    {(s.feedback.answers.reduce((a,b)=>a+b,0)/5).toFixed(1)}
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-4">
-                                                <div className="flex gap-2 items-start text-slate-500 italic text-sm">
-                                                    <MessageSquare size={16} className="mt-1 text-slate-300 shrink-0" />
-                                                    {s.feedback.comments || "No comments provided."}
-                                                </div>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {students.map((s, i) => (
+                                        <tr key={i} className="hover:bg-slate-50/50">
+                                            <td className="px-8 py-4 font-bold text-slate-700">{s.name}</td>
+                                            <td className="px-8 py-4 text-slate-500 font-mono text-xs">{s.collegeId}</td>
+                                            <td className="px-8 py-4 text-center">
+                                                <span className={`px-3 py-1 rounded-full text-[10px] font-black ${s.feedback?.isSubmitted ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                                                    {s.feedback?.isSubmitted ? 'SUBMITTED' : 'PENDING'}
+                                                </span>
                                             </td>
                                         </tr>
-                                    ))
-                                ) : (
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-indigo-50/50 text-indigo-400 text-[10px] font-black uppercase tracking-widest">
                                     <tr>
-                                        <td colSpan="3" className="py-20 text-center text-slate-400 font-medium">
-                                            No feedback records available yet.
-                                        </td>
+                                        <th className="px-8 py-5">Student</th>
+                                        <th className="px-8 py-4 text-center">Rating</th>
+                                        <th className="px-8 py-4">Comments</th>
                                     </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {students.filter(s => s.feedback?.isSubmitted).length > 0 ? (
+                                        students.filter(s => s.feedback?.isSubmitted).map((s, i) => (
+                                            <tr key={i}>
+                                                <td className="px-8 py-5">
+                                                    <p className="font-bold text-slate-800">{s.name}</p>
+                                                    <p className="text-xs text-slate-400">{s.collegeId}</p>
+                                                </td>
+                                                <td className="px-8 py-4">
+                                                    <div className="flex items-center justify-center gap-2 bg-indigo-50 text-indigo-600 w-16 mx-auto py-1 rounded-lg font-black">
+                                                        <Star size={14} fill="currentColor" />
+                                                        {(s.feedback.answers.reduce((a,b)=>a+b,0)/5).toFixed(1)}
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-4">
+                                                    <div className="flex gap-2 items-start text-slate-500 italic text-sm">
+                                                        <MessageSquare size={16} className="mt-1 text-slate-300 shrink-0" />
+                                                        {s.feedback.comments || "No comments provided."}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="3" className="py-20 text-center text-slate-400 font-medium">
+                                                No feedback records available yet.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </div>
             </div>
