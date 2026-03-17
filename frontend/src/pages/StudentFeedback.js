@@ -1,0 +1,187 @@
+import React, { useState } from 'react';
+import axios from 'axios';
+import { User, KeyRound, Star, Send, CheckCircle2, ChevronRight } from 'lucide-react';
+
+const StudentFeedback = () => {
+  const [step, setStep] = useState(1);
+  const [collegeId, setCollegeId] = useState('');
+  const [otp, setOtp] = useState('');
+  const [studentName, setStudentName] = useState('');
+  const [answers, setAnswers] = useState([5, 5, 5, 5, 5]);
+  const [comments, setComments] = useState('');
+
+  const questions = [
+    "Food Quality & Taste",
+    "Cleanliness of Mess/Washrooms",
+    "Wi-Fi Speed & Connectivity",
+    "Warden Response/Behavior",
+    "Drinking Water Availability"
+  ];
+
+  // Step 1: Request OTP
+  const handleRequestOTP = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/student/${collegeId}`);
+      setStudentName(res.data.name);
+      await axios.post('http://localhost:5000/api/student/send-otp', { collegeId });
+      setStep(2);
+    } catch (err) {
+      alert("Student ID not found. Please check and try again.");
+    }
+  };
+
+  // Step 2: Verify OTP
+  const handleVerifyOTP = async () => {
+    try {
+      const res = await axios.post('http://localhost:5000/api/student/verify-otp', { collegeId, otp });
+      if (res.data.success) setStep(3);
+    } catch (err) {
+      alert("Invalid OTP. Check your terminal/console.");
+    }
+  };
+
+  // Step 3: Submit Feedback
+  const handleSubmit = async () => {
+    try {
+      await axios.post('http://localhost:5000/api/student/submit-feedback', { collegeId, answers, comments });
+      setStep(4);
+    } catch (err) {
+      alert("Submission failed.");
+    }
+  };
+
+  const updateRating = (index, val) => {
+    const newAnswers = [...answers];
+    newAnswers[index] = val;
+    setAnswers(newAnswers);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center p-4">
+      {/* Header Logo Area */}
+      <div className="w-full max-w-md flex justify-center py-6">
+        <img src="/images/curaj-logo.png" alt="CURAJ" className="h-14 object-contain" />
+      </div>
+
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-[#E9ECEF] p-6 mb-8">
+        
+        {/* Step 1: ID Entry */}
+        {step === 1 && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-[#1E3A3A]">Hostel Feedback</h2>
+              <p className="text-slate-500 text-sm mt-1">Enter your College ID to begin</p>
+            </div>
+            <div className="relative">
+              <User className="absolute left-4 top-4 text-slate-400" size={20} />
+              <input 
+                type="text" placeholder="e.g. 2024MSCPY01"
+                className="w-full pl-12 pr-4 py-4 bg-[#F8F9FA] border border-[#E9ECEF] rounded-xl outline-none focus:ring-2 focus:ring-[#1E3A3A]"
+                onChange={(e) => setCollegeId(e.target.value)}
+              />
+            </div>
+            <button 
+              onClick={handleRequestOTP}
+              className="w-full bg-[#1E3A3A] text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-all"
+            >
+              Get Started <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
+
+        {/* Step 2: OTP Verification */}
+        {step === 2 && (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-[#1E3A3A]">Verify it's you, {studentName}</h2>
+              <p className="text-slate-500 text-sm mt-1">Enter the 6-digit code provided</p>
+            </div>
+            <div className="relative">
+              <KeyRound className="absolute left-4 top-4 text-slate-400" size={20} />
+              <input 
+                type="text" placeholder="000000"
+                className="w-full pl-12 pr-4 py-4 bg-[#F8F9FA] border border-[#E9ECEF] rounded-xl outline-none text-center text-2xl tracking-[0.5em] font-bold focus:ring-2 focus:ring-[#1E3A3A]"
+                onChange={(e) => setOtp(e.target.value)}
+              />
+            </div>
+            <button 
+              onClick={handleVerifyOTP}
+              className="w-full bg-[#1E3A3A] text-white py-4 rounded-xl font-bold"
+            >
+              Verify OTP
+            </button>
+          </div>
+        )}
+
+        {/* Step 3: Actual Feedback Form */}
+        {step === 3 && (
+          <div className="space-y-8 animate-in fade-in">
+            <div className="border-b border-slate-100 pb-4">
+              <h2 className="text-xl font-bold text-[#1E3A3A]">Digital Feedback Form</h2>
+              <p className="text-xs text-[#6B705C] font-bold uppercase tracking-widest mt-1">Hostel Resident Service</p>
+            </div>
+
+            <div className="space-y-8">
+              {questions.map((q, i) => (
+                <div key={i} className="space-y-3">
+                  <p className="text-[#212529] font-semibold text-sm">{i+1}. {q}</p>
+                  <div className="flex justify-between">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => updateRating(i, star)}
+                        className={`p-2 rounded-lg transition-all ${answers[i] >= star ? 'text-amber-500 scale-110' : 'text-slate-200'}`}
+                      >
+                        <Star size={28} fill={answers[i] >= star ? "currentColor" : "none"} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-[#212529] font-semibold text-sm">Additional Comments</p>
+              <textarea 
+                placeholder="Share your concerns or suggestions..."
+                className="w-full p-4 bg-[#F8F9FA] border border-[#E9ECEF] rounded-xl outline-none h-32 text-sm"
+                onChange={(e) => setComments(e.target.value)}
+              />
+            </div>
+
+            <button 
+              onClick={handleSubmit}
+              className="w-full bg-[#1E3A3A] text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg"
+            >
+              <Send size={18} /> Submit Feedback
+            </button>
+          </div>
+        )}
+
+        {/* Step 4: Success */}
+        {step === 4 && (
+          <div className="py-10 text-center space-y-4 animate-in zoom-in">
+            <div className="flex justify-center text-emerald-500">
+              <CheckCircle2 size={80} />
+            </div>
+            <h2 className="text-2xl font-bold text-[#1E3A3A]">Thank You!</h2>
+            <p className="text-slate-500">Your feedback has been recorded securely. We are working to make CURAJ Hostels better for you.</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="text-[#1E3A3A] font-bold text-sm underline"
+            >
+              Back to Home
+            </button>
+          </div>
+        )}
+      </div>
+      
+      {/* Footer Info */}
+      <p className="text-[10px] text-slate-400 text-center uppercase tracking-widest leading-loose">
+        Secure Academic Feedback System <br/> Central University of Rajasthan
+      </p>
+    </div>
+  );
+};
+
+export default StudentFeedback;

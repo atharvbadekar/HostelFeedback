@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  /* Using the Soft Alabaster background globally */
+  background-color: #F8F9FA;
+  color: #212529; /* Midnight Slate for text */
+  font-family: 'Inter', sans-serif; /* A cleaner font */
+}
+
+/* Custom button style to avoid using bright indigo */
+.btn-primary {
+  background-color: #1E3A3A;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background-color: #152929;
+}
