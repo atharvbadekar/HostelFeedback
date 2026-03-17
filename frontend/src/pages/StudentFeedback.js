@@ -3,7 +3,7 @@ import axios from 'axios';
 import { User, KeyRound, Star, Send, CheckCircle2, ChevronRight } from 'lucide-react';
 
 const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://your-backend-name.onrender.com' // You will get this link from Render.com
+  ? 'https://hostelfeedback.onrender.com' // You will get this link from Render.com
   : 'http://localhost:5000';
 
 const StudentFeedback = () => {
@@ -23,20 +23,21 @@ const StudentFeedback = () => {
   ];
 
   // Step 1: Request OTP
-  const handleRequestOTP = async () => {
-    try {
-      // 1. Find student first to show their name
-      const res = await axios.get(`${API_URL}/api/student/${collegeId}`);
-      setStudentName(res.data.name);
-  
-      // 2. Trigger the real SMS
-      await axios.post('${API_URL}/api/student/send-otp', { collegeId });
-      
-      setStep(2); // Move to OTP input screen
-    } catch (err) {
-      alert("Error: " + (err.response?.data?.error || "Connection failed"));
-    }
-  };
+  const [loading, setLoading] = useState(false);
+
+const handleRequestOTP = async () => {
+  setLoading(true); // Start loading
+  try {
+    const res = await axios.get(`${API_URL}/api/student/${collegeId}`);
+    // ... rest of your logic
+  } catch (err) {
+    alert("Check connection or ID");
+  } finally {
+    setLoading(false); // Stop loading
+  }
+};
+
+
 
   // Step 2: Verify OTP
   const handleVerifyOTP = async () => {
@@ -88,12 +89,10 @@ const StudentFeedback = () => {
                 onChange={(e) => setCollegeId(e.target.value)}
               />
             </div>
-            <button 
-              onClick={handleRequestOTP}
-              className="w-full bg-[#1E3A3A] text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-all"
-            >
-              Get Started <ChevronRight size={18} />
-            </button>
+           
+<button onClick={handleRequestOTP} disabled={loading}>
+  {loading ? "Waking up server..." : "Get Started"}
+</button>
           </div>
         )}
 
