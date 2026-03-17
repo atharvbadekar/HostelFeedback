@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { User, KeyRound, Star, Send, CheckCircle2, ChevronRight } from 'lucide-react';
 
+// Automatically switches between Local and Render
 const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://hostelfeedback.onrender.com' // You will get this link from Render.com
+  ? 'https://hostelfeedback.onrender.com' 
   : 'http://localhost:5000';
 
 const StudentFeedback = () => {
@@ -13,6 +14,7 @@ const StudentFeedback = () => {
   const [studentName, setStudentName] = useState('');
   const [answers, setAnswers] = useState([5, 5, 5, 5, 5]);
   const [comments, setComments] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const questions = [
     "Food Quality & Taste",
@@ -23,36 +25,41 @@ const StudentFeedback = () => {
   ];
 
   // Step 1: Request OTP
-  const [loading, setLoading] = useState(false);
+  const handleRequestOTP = async () => {
+    if (!collegeId) return alert("Please enter your College ID");
+    setLoading(true);
+    try {
+      // 1. First get student details to confirm they exist
+      const res = await axios.get(`${API_URL}/api/student/${collegeId}`);
+      setStudentName(res.data.name);
 
-const handleRequestOTP = async () => {
-  setLoading(true); // Start loading
-  try {
-    const res = await axios.get(`${API_URL}/api/student/${collegeId}`);
-    // ... rest of your logic
-  } catch (err) {
-    alert("Check connection or ID");
-  } finally {
-    setLoading(false); // Stop loading
-  }
-};
-
-
+      // 2. Trigger the SMS
+      await axios.post(`${API_URL}/api/student/send-otp`, { collegeId });
+      
+      setStep(2); // Move to OTP screen
+    } catch (err) {
+      alert(err.response?.data?.error || "Student not found or Server error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Step 2: Verify OTP
   const handleVerifyOTP = async () => {
     try {
-      const res = await axios.post('${API_URL}/api/student/verify-otp', { collegeId, otp });
+      // FIXED: Used backticks instead of single quotes
+      const res = await axios.post(`${API_URL}/api/student/verify-otp`, { collegeId, otp });
       if (res.data.success) setStep(3);
     } catch (err) {
-      alert("Invalid OTP. Check your terminal/console.");
+      alert("Invalid OTP. Please try again.");
     }
   };
 
   // Step 3: Submit Feedback
   const handleSubmit = async () => {
     try {
-      await axios.post('${API_URL}/api/student/submit-feedback', { collegeId, answers, comments });
+      // FIXED: Used backticks instead of single quotes
+      await axios.post(`${API_URL}/api/student/submit-feedback`, { collegeId, answers, comments });
       setStep(4);
     } catch (err) {
       alert("Submission failed.");
@@ -86,13 +93,17 @@ const handleRequestOTP = async () => {
               <input 
                 type="text" placeholder="e.g. 2024MSCPY01"
                 className="w-full pl-12 pr-4 py-4 bg-[#F8F9FA] border border-[#E9ECEF] rounded-xl outline-none focus:ring-2 focus:ring-[#1E3A3A]"
-                onChange={(e) => setCollegeId(e.target.value)}
+                onChange={(e) => setCollegeId(e.target.value.toUpperCase())}
               />
             </div>
-           
-<button onClick={handleRequestOTP} disabled={loading}>
-  {loading ? "Waking up server..." : "Get Started"}
-</button>
+            
+            <button 
+              onClick={handleRequestOTP} 
+              disabled={loading}
+              className="w-full bg-[#1E3A3A] text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-70"
+            >
+              {loading ? "Waking up server..." : "Get Started"} <ChevronRight size={18} />
+            </button>
           </div>
         )}
 
@@ -100,8 +111,8 @@ const handleRequestOTP = async () => {
         {step === 2 && (
           <div className="space-y-6 animate-in fade-in">
             <div className="text-center">
-              <h2 className="text-xl font-bold text-[#1E3A3A]">Verify it's you, {studentName}</h2>
-              <p className="text-slate-500 text-sm mt-1">Enter the 6-digit code provided</p>
+              <h2 className="text-xl font-bold text-[#1E3A3A]">Welcome, {studentName}</h2>
+              <p className="text-slate-500 text-sm mt-1">Enter the 6-digit code sent to your mobile</p>
             </div>
             <div className="relative">
               <KeyRound className="absolute left-4 top-4 text-slate-400" size={20} />
