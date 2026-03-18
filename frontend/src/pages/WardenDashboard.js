@@ -7,9 +7,9 @@ const WardenDashboard = ({ hostelId, onLogout }) => {
     const [view, setView] = useState('list'); // 'list' or 'feedback'
     const [loading, setLoading] = useState(true);
 
-    const API_URL = process.env.NODE_ENV === 'production' 
-        ? 'https://hostelfeedback.onrender.com' 
-        : 'http://localhost:5000';
+    const API_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000' 
+    : 'https://hostelfeedback.onrender.com';
 
     // Fetch Student & Feedback data
     useEffect(() => {
