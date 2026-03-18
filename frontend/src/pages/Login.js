@@ -11,8 +11,8 @@ const Login = ({ setUser }) => {
   // BULLETPROOF URL CHECK: 
   // If we are on the live website, use Render. If we are on our own PC, use localhost.
   const API_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:5000' 
-    : 'https://hostelfeedback.onrender.com';
+  ? 'http://localhost:5000' 
+  : 'https://hostelfeedback.onrender.com';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,7 +24,6 @@ const Login = ({ setUser }) => {
         username: creds.username, 
         password: creds.password 
       });
-
       if (res.data.token) {
         // Store session data
         localStorage.setItem('token', res.data.token);
