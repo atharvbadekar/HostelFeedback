@@ -24,11 +24,10 @@ const WardenDashboard = ({ hostelId, onLogout }) => {
                 });
 
                 // --- DATA FILTERING LOGIC ---
+                // Chief/Admin sees all data; Wardens see only their hostel
                 if (role === 'chief' || role === 'admin') {
-                    // Chief sees everyone
                     setStudents(res.data);
                 } else {
-                    // Warden only sees students matching their hostelId
                     const filtered = res.data.filter(s => Number(s.hostelId) === Number(hostelId));
                     setStudents(filtered);
                 }
@@ -100,28 +99,28 @@ const WardenDashboard = ({ hostelId, onLogout }) => {
                 {/* --- HEADER --- */}
                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-8 flex justify-between items-center">
                     <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-xl text-white shadow-lg ${role === 'chief' ? 'bg-amber-500' : 'bg-indigo-600'}`}>
-                            {role === 'chief' ? <LayoutDashboard /> : <ShieldCheck />}
+                        <div className={`p-3 rounded-xl text-white shadow-lg ${role === 'chief' ? 'bg-amber-500 shadow-amber-200' : 'bg-indigo-600 shadow-indigo-200'}`}>
+                            {role === 'chief' ? <LayoutDashboard size={24} /> : <ShieldCheck size={24} />}
                         </div>
                         <div>
-                            <h1 className="text-2xl font-black text-slate-900">
+                            <h1 className="text-2xl font-black text-slate-900 leading-tight">
                                 {role === 'chief' ? "Chief Warden Portal" : `Hostel ${hostelId} Warden`}
                             </h1>
-                            <p className="text-slate-500 text-sm font-medium">CURAJ Management System</p>
+                            <p className="text-slate-500 text-sm font-medium uppercase tracking-wider">CURAJ Management System</p>
                         </div>
                     </div>
-                    <button onClick={onLogout} className="flex items-center gap-2 px-5 py-2.5 bg-rose-50 text-rose-600 rounded-xl font-bold text-sm hover:bg-rose-100 transition-all">
+                    <button onClick={onLogout} className="flex items-center gap-2 px-5 py-2.5 bg-rose-50 text-rose-600 rounded-xl font-bold text-sm hover:bg-rose-100 transition-all border border-rose-100">
                         <LogOut size={18} /> Sign Out
                     </button>
                 </div>
 
                 {/* --- SEARCH BAR --- */}
-                <div className="relative mb-8">
-                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                <div className="relative mb-8 group">
+                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
                     <input 
                         type="text" 
                         placeholder="Search by student name or college ID..."
-                        className="w-full pl-16 pr-6 py-5 bg-white rounded-[2rem] shadow-sm border border-slate-100 focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-600"
+                        className="w-full pl-16 pr-6 py-5 bg-white rounded-[2rem] shadow-sm border border-slate-100 focus:ring-4 focus:ring-indigo-50/50 focus:border-indigo-200 outline-none font-medium text-slate-600 transition-all"
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
@@ -154,86 +153,99 @@ const WardenDashboard = ({ hostelId, onLogout }) => {
 
                 {/* --- TAB NAVIGATION --- */}
                 <div className="flex gap-4 mb-6">
-                    <button onClick={() => setView('list')} className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all ${view === 'list' ? 'bg-slate-900 text-white' : 'bg-white text-slate-500'}`}>
+                    <button onClick={() => setView('list')} className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-sm ${view === 'list' ? 'bg-slate-900 text-white' : 'bg-white text-slate-500 border border-slate-100'}`}>
                         Student List
                     </button>
-                    <button onClick={() => setView('feedback')} className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all ${view === 'feedback' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500'}`}>
+                    <button onClick={() => setView('feedback')} className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-sm ${view === 'feedback' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 border border-slate-100'}`}>
                         Feedback Data
                     </button>
                     {(role === 'chief' || role === 'admin') && (
-                        <button onClick={() => setView('manage-wardens')} className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all ${view === 'manage-wardens' ? 'bg-amber-500 text-white' : 'bg-white text-slate-500'}`}>
+                        <button onClick={() => setView('manage-wardens')} className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-sm ${view === 'manage-wardens' ? 'bg-amber-500 text-white' : 'bg-white text-slate-500 border border-slate-100'}`}>
                             Manage Wardens
                         </button>
                     )}
                 </div>
 
                 {/* --- CONTENT AREA --- */}
-                <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+                <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden mb-12">
                     {view === 'list' && (
-                        <table className="w-full text-left">
-                            <thead className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                                <tr>
-                                    <th className="px-8 py-5">Name</th>
-                                    <th className="px-8 py-4">ID</th>
-                                    <th className="px-8 py-4">Hostel</th>
-                                    <th className="px-8 py-4 text-center">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {filteredStudents.map((s, i) => (
-                                    <tr key={i} className="hover:bg-slate-50/50">
-                                        <td className="px-8 py-4 font-bold text-slate-700">{s.name}</td>
-                                        <td className="px-8 py-4 text-slate-500 font-mono text-xs">{s.collegeId}</td>
-                                        <td className="px-8 py-4 text-slate-500 text-sm">Hostel {s.hostelId}</td>
-                                        <td className="px-8 py-4 text-center">
-                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black ${s.feedback?.isSubmitted ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-                                                {s.feedback?.isSubmitted ? 'SUBMITTED' : 'PENDING'}
-                                            </span>
-                                        </td>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                                    <tr>
+                                        <th className="px-8 py-5">Name</th>
+                                        <th className="px-8 py-4">ID</th>
+                                        <th className="px-8 py-4">Hostel</th>
+                                        <th className="px-8 py-4 text-center">Status</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {filteredStudents.map((s, i) => (
+                                        <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-8 py-4 font-bold text-slate-700">{s.name}</td>
+                                            <td className="px-8 py-4 text-slate-500 font-mono text-xs">{s.collegeId}</td>
+                                            <td className="px-8 py-4 text-slate-500 text-sm">Hostel {s.hostelId}</td>
+                                            <td className="px-8 py-4 text-center">
+                                                <span className={`px-3 py-1 rounded-full text-[10px] font-black ${s.feedback?.isSubmitted ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                                                    {s.feedback?.isSubmitted ? 'SUBMITTED' : 'PENDING'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
 
                     {view === 'feedback' && (
-                        <table className="w-full text-left">
-                            <thead className="bg-indigo-50/50 text-indigo-400 text-[10px] font-black uppercase tracking-widest">
-                                <tr>
-                                    <th className="px-8 py-5">Student</th>
-                                    <th className="px-8 py-4 text-center">Rating</th>
-                                    <th className="px-8 py-4">Comments</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {filteredStudents.filter(s => s.feedback?.isSubmitted).map((s, i) => (
-                                    <tr key={i}>
-                                        <td className="px-8 py-5">
-                                            <p className="font-bold text-slate-800">{s.name}</p>
-                                            <p className="text-xs text-slate-400">{s.collegeId} (Hostel {s.hostelId})</p>
-                                        </td>
-                                        <td className="px-8 py-4">
-                                            <div className="flex items-center justify-center gap-2 bg-indigo-50 text-indigo-600 w-16 mx-auto py-1 rounded-lg font-black">
-                                                <Star size={14} fill="currentColor" />
-                                                {(s.feedback.answers.reduce((a,b)=>a+b,0)/5).toFixed(1)}
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-4 italic text-slate-500 text-sm">
-                                            "{s.feedback.comments || "No comments provided."}"
-                                        </td>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-indigo-50/50 text-indigo-400 text-[10px] font-black uppercase tracking-widest">
+                                    <tr>
+                                        <th className="px-8 py-5">Student</th>
+                                        <th className="px-8 py-4 text-center">Average Rating</th>
+                                        <th className="px-8 py-4">Comments</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {filteredStudents.filter(s => s.feedback?.isSubmitted).map((s, i) => (
+                                        <tr key={i}>
+                                            <td className="px-8 py-5">
+                                                <p className="font-bold text-slate-800">{s.name}</p>
+                                                <p className="text-xs text-slate-400">{s.collegeId} (Hostel {s.hostelId})</p>
+                                            </td>
+                                            <td className="px-8 py-4">
+                                                <div className="flex items-center justify-center gap-2 bg-indigo-50 text-indigo-600 w-16 mx-auto py-1 rounded-lg font-black">
+                                                    <Star size={14} fill="currentColor" />
+                                                    {/* FIXED: Dynamic division by answers array length */}
+                                                    {(s.feedback.answers.reduce((a,b)=>a+b,0) / s.feedback.answers.length).toFixed(1)}
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-4 italic text-slate-500 text-sm">
+                                                <div className="flex gap-2">
+                                                    <MessageSquare size={16} className="shrink-0 text-slate-300 mt-1" />
+                                                    {s.feedback.comments || "No comments provided."}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
 
                     {view === 'manage-wardens' && (
-                        <div className="p-8 max-w-xl mx-auto space-y-4">
-                            <h3 className="text-2xl font-black text-slate-800 text-center mb-6">Create Warden Access</h3>
-                            <input type="text" placeholder="Username" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none" onChange={(e) => setNewWarden({...newWarden, username: e.target.value})} />
-                            <input type="number" placeholder="Hostel ID" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none" onChange={(e) => setNewWarden({...newWarden, hostelId: e.target.value})} />
-                            <input type="password" placeholder="Password" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none" onChange={(e) => setNewWarden({...newWarden, password: e.target.value})} />
-                            <button onClick={handleCreateWarden} className="w-full bg-amber-500 text-white py-4 rounded-2xl font-bold shadow-lg">Register Warden</button>
+                        <div className="p-8 max-w-xl mx-auto space-y-6">
+                            <div className="text-center">
+                                <h3 className="text-2xl font-black text-slate-800 mb-2">Create Warden Access</h3>
+                                <p className="text-slate-500 text-sm">Assign a new management account to a hostel</p>
+                            </div>
+                            <div className="space-y-4">
+                                <input type="text" placeholder="Username" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500 transition-all" onChange={(e) => setNewWarden({...newWarden, username: e.target.value})} />
+                                <input type="number" placeholder="Hostel Number (e.g. 1)" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500 transition-all" onChange={(e) => setNewWarden({...newWarden, hostelId: e.target.value})} />
+                                <input type="password" placeholder="Password" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500 transition-all" onChange={(e) => setNewWarden({...newWarden, password: e.target.value})} />
+                                <button onClick={handleCreateWarden} className="w-full bg-amber-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-amber-200 hover:bg-amber-600 transition-all active:scale-[0.98]">Register Warden Account</button>
+                            </div>
                         </div>
                     )}
                 </div>
