@@ -8,33 +8,42 @@ const Login = ({ setUser }) => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // BULLETPROOF URL CHECK: 
-  // If we are on the live website, use Render. If we are on our own PC, use localhost.
+  // URL CHECK: 
   const API_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:5000' 
-  : 'https://hostelfeedback.onrender.com';
+    ? 'http://localhost:5000' 
+    : 'https://hostelfeedback.onrender.com';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // FIXED: Using backticks and the verified API_URL variable
       const res = await axios.post(`${API_URL}/api/login/staff`, { 
-        username: creds.username, 
+        username: creds.username.trim(), // Remove accidental spaces
         password: creds.password 
       });
+
+      console.log("Login Response:", res.data); // Helpful for debugging
+
       if (res.data.token) {
-        // Store session data
+        // 1. Store everything in LocalStorage
         localStorage.setItem('token', res.data.token);
         localStorage.setItem('role', res.data.role);
-        localStorage.setItem('hostelId', res.data.hostelId);
+        // Default to 0 for chief warden if hostelId is missing
+        localStorage.setItem('hostelId', res.data.hostelId || 0); 
         
-        // Update App state
+        // 2. Update App state
         setUser(res.data);
 
-        // Redirect to the unified dashboard
-        navigate('/dashboard');
+        // 3. Navigation Logic
+        // In your backend, admin = 'chief'. Wardens = 'warden'.
+        if (res.data.role === 'chief' || res.data.role === 'admin') {
+          console.log("Redirecting to Admin view...");
+          navigate('/dashboard'); 
+        } else {
+          console.log("Redirecting to Warden view...");
+          navigate('/dashboard');
+        }
       }
     } catch (err) {
       console.error("Login Error:", err);
@@ -48,7 +57,6 @@ const Login = ({ setUser }) => {
   return (
     <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4 font-sans">
       <div className="w-full max-w-md">
-        {/* Decorative Header */}
         <div className="text-center mb-8">
           <div className="inline-flex p-4 rounded-2xl bg-indigo-500/10 mb-4">
             <ShieldCheck className="text-indigo-400" size={40} />
@@ -57,7 +65,6 @@ const Login = ({ setUser }) => {
           <p className="text-slate-400 mt-2">Central University of Rajasthan</p>
         </div>
 
-        {/* Login Card */}
         <div className="bg-white rounded-[2.5rem] p-8 shadow-2xl shadow-indigo-500/10 border border-slate-100">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
@@ -113,7 +120,6 @@ const Login = ({ setUser }) => {
           </div>
         </div>
 
-        {/* Footer */}
         <p className="mt-8 text-center text-slate-500 text-[10px] uppercase tracking-[0.2em]">
           Internal Academic Network • CURAJ
         </p>
