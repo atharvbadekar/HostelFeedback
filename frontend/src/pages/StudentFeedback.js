@@ -2,11 +2,6 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { User, KeyRound, Star, Send, CheckCircle2, ChevronRight } from 'lucide-react';
 
-// Automatically switches between Local and Render
-const API_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:5000' 
-  : 'https://hostelfeedback.onrender.com';
-
 const StudentFeedback = () => {
   const [step, setStep] = useState(1);
   const [collegeId, setCollegeId] = useState('');
@@ -15,6 +10,11 @@ const StudentFeedback = () => {
   const [answers, setAnswers] = useState([5, 5, 5, 5, 5]);
   const [comments, setComments] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // FIXED: Bulletproof URL check to move away from localhost
+  const API_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000' 
+    : 'https://hostelfeedback.onrender.com';
 
   const questions = [
     "Food Quality & Taste",
@@ -29,14 +29,14 @@ const StudentFeedback = () => {
     if (!collegeId) return alert("Please enter your College ID");
     setLoading(true);
     try {
-      // 1. First get student details to confirm they exist
+      // 1. Verify student exists (Using Backticks)
       const res = await axios.get(`${API_URL}/api/student/${collegeId}`);
       setStudentName(res.data.name);
 
-      // 2. Trigger the SMS
+      // 2. Trigger the SMS OTP
       await axios.post(`${API_URL}/api/student/send-otp`, { collegeId });
       
-      setStep(2); // Move to OTP screen
+      setStep(2); 
     } catch (err) {
       alert(err.response?.data?.error || "Student not found or Server error");
     } finally {
@@ -47,7 +47,6 @@ const StudentFeedback = () => {
   // Step 2: Verify OTP
   const handleVerifyOTP = async () => {
     try {
-      // FIXED: Used backticks instead of single quotes
       const res = await axios.post(`${API_URL}/api/student/verify-otp`, { collegeId, otp });
       if (res.data.success) setStep(3);
     } catch (err) {
@@ -58,7 +57,6 @@ const StudentFeedback = () => {
   // Step 3: Submit Feedback
   const handleSubmit = async () => {
     try {
-      // FIXED: Used backticks instead of single quotes
       await axios.post(`${API_URL}/api/student/submit-feedback`, { collegeId, answers, comments });
       setStep(4);
     } catch (err) {
@@ -81,9 +79,8 @@ const StudentFeedback = () => {
 
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-[#E9ECEF] p-6 mb-8">
         
-        {/* Step 1: ID Entry */}
         {step === 1 && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+          <div className="space-y-6">
             <div className="text-center">
               <h2 className="text-2xl font-bold text-[#1E3A3A]">Hostel Feedback</h2>
               <p className="text-slate-500 text-sm mt-1">Enter your College ID to begin</p>
@@ -96,7 +93,6 @@ const StudentFeedback = () => {
                 onChange={(e) => setCollegeId(e.target.value.toUpperCase())}
               />
             </div>
-            
             <button 
               onClick={handleRequestOTP} 
               disabled={loading}
@@ -107,9 +103,8 @@ const StudentFeedback = () => {
           </div>
         )}
 
-        {/* Step 2: OTP Verification */}
         {step === 2 && (
-          <div className="space-y-6 animate-in fade-in">
+          <div className="space-y-6">
             <div className="text-center">
               <h2 className="text-xl font-bold text-[#1E3A3A]">Welcome, {studentName}</h2>
               <p className="text-slate-500 text-sm mt-1">Enter the 6-digit code sent to your mobile</p>
@@ -122,18 +117,14 @@ const StudentFeedback = () => {
                 onChange={(e) => setOtp(e.target.value)}
               />
             </div>
-            <button 
-              onClick={handleVerifyOTP}
-              className="w-full bg-[#1E3A3A] text-white py-4 rounded-xl font-bold"
-            >
+            <button onClick={handleVerifyOTP} className="w-full bg-[#1E3A3A] text-white py-4 rounded-xl font-bold">
               Verify OTP
             </button>
           </div>
         )}
 
-        {/* Step 3: Actual Feedback Form */}
         {step === 3 && (
-          <div className="space-y-8 animate-in fade-in">
+          <div className="space-y-8">
             <div className="border-b border-slate-100 pb-4">
               <h2 className="text-xl font-bold text-[#1E3A3A]">Digital Feedback Form</h2>
               <p className="text-xs text-[#6B705C] font-bold uppercase tracking-widest mt-1">Hostel Resident Service</p>
@@ -148,7 +139,7 @@ const StudentFeedback = () => {
                       <button
                         key={star}
                         onClick={() => updateRating(i, star)}
-                        className={`p-2 rounded-lg transition-all ${answers[i] >= star ? 'text-amber-500 scale-110' : 'text-slate-200'}`}
+                        className={`p-2 rounded-lg ${answers[i] >= star ? 'text-amber-500' : 'text-slate-200'}`}
                       >
                         <Star size={28} fill={answers[i] >= star ? "currentColor" : "none"} />
                       </button>
@@ -161,43 +152,28 @@ const StudentFeedback = () => {
             <div className="space-y-2">
               <p className="text-[#212529] font-semibold text-sm">Additional Comments</p>
               <textarea 
-                placeholder="Share your concerns or suggestions..."
                 className="w-full p-4 bg-[#F8F9FA] border border-[#E9ECEF] rounded-xl outline-none h-32 text-sm"
                 onChange={(e) => setComments(e.target.value)}
               />
             </div>
 
-            <button 
-              onClick={handleSubmit}
-              className="w-full bg-[#1E3A3A] text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg"
-            >
+            <button onClick={handleSubmit} className="w-full bg-[#1E3A3A] text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2">
               <Send size={18} /> Submit Feedback
             </button>
           </div>
         )}
 
-        {/* Step 4: Success */}
         {step === 4 && (
-          <div className="py-10 text-center space-y-4 animate-in zoom-in">
+          <div className="py-10 text-center space-y-4">
             <div className="flex justify-center text-emerald-500">
               <CheckCircle2 size={80} />
             </div>
-            <h2 className="text-2xl font-bold text-[#1E3A3A]">Thank You!</h2>
-            <p className="text-slate-500">Your feedback has been recorded securely. We are working to make CURAJ Hostels better for you.</p>
-            <button 
-              onClick={() => window.location.reload()}
-              className="text-[#1E3A3A] font-bold text-sm underline"
-            >
-              Back to Home
-            </button>
+            <h2 className="text-2xl font-bold text-[#1E3A3A]">Success!</h2>
+            <p className="text-slate-500">Feedback recorded for {studentName}.</p>
+            <button onClick={() => window.location.reload()} className="underline text-sm font-bold">Back to Home</button>
           </div>
         )}
       </div>
-      
-      {/* Footer Info */}
-      <p className="text-[10px] text-slate-400 text-center uppercase tracking-widest leading-loose">
-        Secure Academic Feedback System <br/> Central University of Rajasthan
-      </p>
     </div>
   );
 };
