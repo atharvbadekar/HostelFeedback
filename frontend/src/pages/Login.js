@@ -18,7 +18,7 @@ const Login = ({ setUser }) => {
 
     try {
       // FIX: Extract username and password from the 'creds' state object
-      const res = await axios.post(`${API_URL}/api/admin/login`, { 
+      const res = await axios.post(`${API_URL}/api/login/staff`, { 
         username: creds.username, 
         password: creds.password 
       });

@@ -235,3 +235,8 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Server running on port ${PORT}`);
 });
+
+// Add this near the bottom of server.js
+app.get('/', (req, res) => {
+    res.send('🚀 CURAJ Hostel Feedback API is Running...');
+});
