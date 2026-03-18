@@ -17,11 +17,17 @@ const StudentFeedback = () => {
     : 'https://hostelfeedback.onrender.com';
 
   const questions = [
-    "Food Quality & Taste",
-    "Cleanliness of Mess/Washrooms",
-    "Wi-Fi Speed & Connectivity",
-    "Warden Response/Behavior",
-    "Drinking Water Availability"
+    "क्या मेगा मेस में मेन्यु फॉलो किया जा रहा है ? Is the menu being followed at Mega Mess?",
+    "मेगा मेस में काउंटर पर खाने की सर्विंग और किचन,डाइनिंग एरिया की साफ़-सफाई कैसी है ?How is the food serving at the counter and the cleanliness of the kitchen and dining area in the mega mess?",
+    "मेगा मेस वेंडर के स्टाफ का व्यवहार कैसा है ? How is the behavior of the staff of Mega Mess Vendor?",
+    "मेगा मेस में बनने वाली रोटी की गुणवता कैसी है? What is the quality of the aata roti made at Mega Mess?",
+    "मेगा मेस में बनने वाली सब्जी की गुणवता कैसी है?What is the quality of vegetables prepared in Mega Mess?",
+    "मेगा मेस में बनने वाले चावल की गुणवता कैसी है?What is the quality of rice cooked in Mega Mess?",
+    "मेगा मेस में बनने वाले दही रायते की गुणवता कैसी है?What is the quality of curd raita made in Mega Mess?",
+    "मेगा मेस में बनने वाली चाय की गुणवता कैसी है?What is the quality of tea made at Mega Mess?",
+    "मेगा मेस में बनने वाले सुबह के नाश्ते की गुणवता कैसी है?What is the quality of breakfast prepared in Mega Mess?",
+    "दैनिक तौर पर मेगा मेस किचन में बनने वाले खाने (नाश्ते,दिन के खाने व रात के खाने) की गुणवता कैसी है?What is the quality of food (breakfast, lunch and dinner) prepared in the Mega Mess Kitchen on a daily basis?",
+    
   ];
 
   // Step 1: Request OTP
