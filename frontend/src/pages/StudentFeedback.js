@@ -3,9 +3,9 @@ import axios from 'axios';
 import { User, KeyRound, Star, Send, CheckCircle2, ChevronRight } from 'lucide-react';
 
 // Automatically switches between Local and Render
-const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://hostelfeedback.onrender.com' 
-  : 'http://localhost:5000';
+const API_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:5000' 
+  : 'https://hostelfeedback.onrender.com';
 
 const StudentFeedback = () => {
   const [step, setStep] = useState(1);
