@@ -1,20 +1,17 @@
-// backend/models/Student.js
 const mongoose = require('mongoose');
 
 const StudentSchema = new mongoose.Schema({
-    collegeId: { type: String, unique: true, required: true },
-    name: String,
-    email: String,
-    mobile: String,
-    hostelId: Number, // 1 to 8
-    otp: String,
+    name: { type: String, required: true },
+    collegeId: { type: String, required: true, unique: true },
+    email: { type: String },
+    mobile: { type: String },
+    hostelId: { type: String },
+    otp: { type: String },
     feedback: {
-        q1: Number,
-        q2: Number,
-        q3: Number,
-        q4: Number,
-        comments: String,
-        submitted: { type: Boolean, default: false }
+        isSubmitted: { type: Boolean, default: false },
+        answers: { type: [Number], default: [] },
+        comments: { type: String, default: "" },
+        submittedAt: { type: Date }
     }
 });
 
