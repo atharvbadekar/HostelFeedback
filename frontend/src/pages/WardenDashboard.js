@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, ShieldCheck, LogOut, Star, MessageSquare, UserPlus, Users, LayoutDashboard, Search } from 'lucide-react';
+import { Upload, ShieldCheck, LogOut, Star, MessageSquare, UserPlus, Users, LayoutDashboard, Search, FileText, X, Clock, Calendar } from 'lucide-react';
 import axios from 'axios';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const WardenDashboard = ({ hostelId, onLogout }) => {
     const [students, setStudents] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [view, setView] = useState('list'); 
     const [loading, setLoading] = useState(true);
+    const [selectedStudent, setSelectedStudent] = useState(null); // For the Detail Modal
     const [newWarden, setNewWarden] = useState({ username: '', password: '', hostelId: '' });
 
     const role = localStorage.getItem('role'); 
-
     const API_URL = window.location.hostname === 'localhost' 
         ? 'http://localhost:5000' 
         : 'https://hostelfeedback.onrender.com';
@@ -23,8 +25,6 @@ const WardenDashboard = ({ hostelId, onLogout }) => {
                     headers: { Authorization: `Bearer ${token}` }
                 });
 
-                // --- DATA FILTERING LOGIC ---
-                // Chief/Admin sees all data; Wardens see only their hostel
                 if (role === 'chief' || role === 'admin') {
                     setStudents(res.data);
                 } else {
@@ -40,224 +40,205 @@ const WardenDashboard = ({ hostelId, onLogout }) => {
         fetchDashboardData();
     }, [API_URL, hostelId, role]);
 
-    // --- SEARCH FILTERING ---
     const filteredStudents = students.filter(s => 
         s.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         s.collegeId?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const handleFileUpload = (e) => {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-            const text = event.target.result;
-            const lines = text.split('\n');
-            const headers = lines[0].split(',').map(h => h.trim());
-            const jsonData = lines.slice(1).map(line => {
-                const values = line.split(',').map(v => v.trim());
-                return headers.reduce((obj, header, i) => {
-                    obj[header] = values[i];
-                    return obj;
-                }, {});
-            }).filter(row => row.collegeId);
+    // --- PDF EXPORT LOGIC ---
+    const downloadPDF = () => {
+        const doc = new jsPDF();
+        const tableColumn = ["Student Name", "ID", "Hostel", "Avg Rating", "Date"];
+        const tableRows = [];
 
-            try {
-                const token = localStorage.getItem('token');
-                await axios.post(`${API_URL}/api/warden/upload`, {
-                    students: jsonData,
-                    hostelId: hostelId
-                }, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                alert("Upload Success!");
-                window.location.reload();
-            } catch (err) {
-                alert("Upload Failed.");
-            }
-        };
-        reader.readAsText(file);
+        filteredStudents.filter(s => s.feedback?.isSubmitted).forEach(s => {
+            const rowData = [
+                s.name,
+                s.collegeId,
+                `Hostel ${s.hostelId}`,
+                (s.feedback.answers.reduce((a, b) => a + b, 0) / s.feedback.answers.length).toFixed(1),
+                s.feedback.submittedAt ? new Date(s.feedback.submittedAt).toLocaleDateString() : 'N/A'
+            ];
+            tableRows.push(rowData);
+        });
+
+        doc.text("CURAJ Mega Mess Feedback Report", 14, 15);
+        doc.autoTable(tableColumn, tableRows, { startY: 20 });
+        doc.save(`Mess_Feedback_Report_${new Date().toLocaleDateString()}.pdf`);
     };
 
-    const handleCreateWarden = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            await axios.post(`${API_URL}/api/admin/create-warden`, newWarden, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            alert("✅ Warden Created Successfully!");
-            setView('list');
-        } catch (err) {
-            alert("❌ Failed to create warden.");
-        }
-    };
-
-    if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-400">Loading...</div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-400 animate-pulse">Initializing Portal...</div>;
 
     return (
-        <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans">
-            <div className="max-w-6xl mx-auto">
+        <div className="min-h-screen bg-slate-50 p-6 md:p-10 font-sans text-slate-800">
+            <div className="max-w-7xl mx-auto">
+                
                 {/* --- HEADER --- */}
                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-8 flex justify-between items-center">
                     <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-xl text-white shadow-lg ${role === 'chief' ? 'bg-amber-500 shadow-amber-200' : 'bg-indigo-600 shadow-indigo-200'}`}>
-                            {role === 'chief' ? <LayoutDashboard size={24} /> : <ShieldCheck size={24} />}
+                        <div className={`p-3 rounded-2xl text-white shadow-lg ${role === 'chief' ? 'bg-amber-500 shadow-amber-100' : 'bg-indigo-600 shadow-indigo-100'}`}>
+                            {role === 'chief' ? <LayoutDashboard size={28} /> : <ShieldCheck size={28} />}
                         </div>
                         <div>
-                            <h1 className="text-2xl font-black text-slate-900 leading-tight">
-                                {role === 'chief' ? "Chief Warden Portal" : `Hostel ${hostelId} Warden`}
-                            </h1>
-                            <p className="text-slate-500 text-sm font-medium uppercase tracking-wider">CURAJ Management System</p>
+                            <h1 className="text-2xl font-black tracking-tight">{role === 'chief' ? "Chief Warden Portal" : `Hostel ${hostelId} Warden`}</h1>
+                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Central University of Rajasthan</p>
                         </div>
                     </div>
-                    <button onClick={onLogout} className="flex items-center gap-2 px-5 py-2.5 bg-rose-50 text-rose-600 rounded-xl font-bold text-sm hover:bg-rose-100 transition-all border border-rose-100">
-                        <LogOut size={18} /> Sign Out
-                    </button>
+                    <div className="flex gap-3">
+                        <button onClick={downloadPDF} className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl font-bold text-sm border border-emerald-100 hover:bg-emerald-100">
+                            <FileText size={18} /> Export PDF
+                        </button>
+                        <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-xl font-bold text-sm border border-rose-100">
+                            <LogOut size={18} />
+                        </button>
+                    </div>
                 </div>
 
-                {/* --- SEARCH BAR --- */}
+                {/* --- SEARCH --- */}
                 <div className="relative mb-8 group">
-                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
+                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" size={22} />
                     <input 
-                        type="text" 
-                        placeholder="Search by student name or college ID..."
-                        className="w-full pl-16 pr-6 py-5 bg-white rounded-[2rem] shadow-sm border border-slate-100 focus:ring-4 focus:ring-indigo-50/50 focus:border-indigo-200 outline-none font-medium text-slate-600 transition-all"
+                        type="text" placeholder="Search by name or enrollment ID..."
+                        className="w-full pl-16 pr-6 py-5 bg-white rounded-[2rem] border border-slate-100 focus:ring-4 focus:ring-indigo-50 shadow-sm outline-none font-medium transition-all"
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
 
-                {/* --- STATS & UPLOAD --- */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Upload size={20}/></div>
-                            <h2 className="font-bold text-slate-800">Bulk Enrollment</h2>
-                        </div>
-                        <input type="file" id="csv-upload" className="hidden" accept=".csv" onChange={handleFileUpload} />
-                        <label htmlFor="csv-upload" className="block w-full text-center py-3 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-widest transition-all">
-                            Choose Student CSV
-                        </label>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-center">
-                        <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-1">Students Found</p>
-                        <p className="text-4xl font-black text-slate-900">{filteredStudents.length}</p>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-center">
-                        <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-1">Feedback Submitted</p>
-                        <p className="text-4xl font-black text-emerald-500">
-                            {filteredStudents.filter(s => s.feedback?.isSubmitted).length}
-                        </p>
-                    </div>
-                </div>
-
-                {/* --- TAB NAVIGATION --- */}
-                <div className="flex gap-4 mb-6">
-                    <button onClick={() => setView('list')} className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-sm ${view === 'list' ? 'bg-slate-900 text-white' : 'bg-white text-slate-500 border border-slate-100'}`}>
+                {/* --- TABS --- */}
+                <div className="flex gap-4 mb-8">
+                    <button onClick={() => setView('list')} className={`px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${view === 'list' ? 'bg-slate-900 text-white shadow-xl' : 'bg-white text-slate-400 border'}`}>
                         Student List
                     </button>
-                    <button onClick={() => setView('feedback')} className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-sm ${view === 'feedback' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 border border-slate-100'}`}>
-                        Feedback Data
+                    <button onClick={() => setView('feedback')} className={`px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${view === 'feedback' ? 'bg-indigo-600 text-white shadow-xl' : 'bg-white text-slate-400 border'}`}>
+                        Feedback Analysis
                     </button>
                     {(role === 'chief' || role === 'admin') && (
-                        <button onClick={() => setView('manage-wardens')} className={`px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-sm ${view === 'manage-wardens' ? 'bg-amber-500 text-white' : 'bg-white text-slate-500 border border-slate-100'}`}>
-                            Manage Wardens
+                        <button onClick={() => setView('manage-wardens')} className={`px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${view === 'manage-wardens' ? 'bg-amber-500 text-white shadow-xl' : 'bg-white text-slate-400 border'}`}>
+                            Manage Staff
                         </button>
                     )}
                 </div>
 
-                {/* --- CONTENT AREA --- */}
-                <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden mb-12">
-                    {view === 'list' && (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                                    <tr>
-                                        <th className="px-8 py-5">Name</th>
-                                        <th className="px-8 py-4">ID</th>
-                                        <th className="px-8 py-4">Hostel</th>
-                                        <th className="px-8 py-4 text-center">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                    {filteredStudents.map((s, i) => (
-                                        <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-8 py-4 font-bold text-slate-700">{s.name}</td>
-                                            <td className="px-8 py-4 text-slate-500 font-mono text-xs">{s.collegeId}</td>
-                                            <td className="px-8 py-4 text-slate-500 text-sm">Hostel {s.hostelId}</td>
-                                            <td className="px-8 py-4 text-center">
-                                                <span className={`px-3 py-1 rounded-full text-[10px] font-black ${s.feedback?.isSubmitted ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-                                                    {s.feedback?.isSubmitted ? 'SUBMITTED' : 'PENDING'}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-
-                    {view === 'feedback' && (
-                        // Inside WardenDashboard.js (Feedback View Table)
-<div className="overflow-x-auto">
-    <table className="w-full text-left">
-        <thead className="bg-indigo-50/50 text-indigo-400 text-[10px] font-black uppercase tracking-widest">
-            <tr>
-                <th className="px-8 py-5">Student Details</th>
-                <th className="px-8 py-4 text-center">Avg Rating</th>
-                <th className="px-8 py-4">Submission Date & Time</th>
-                <th className="px-8 py-4">Comments</th>
-            </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-50">
-            {filteredStudents.filter(s => s.feedback?.isSubmitted).map((s, i) => (
-                <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-8 py-5">
-                        <p className="font-bold text-slate-800">{s.name}</p>
-                        <p className="text-[10px] text-slate-400 uppercase font-black">{s.collegeId}</p>
-                    </td>
-                    <td className="px-8 py-4 text-center">
-                        <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg font-black text-sm">
-                            <Star size={14} fill="currentColor" />
-                            {(s.feedback.answers.reduce((a,b)=>a+b,0) / s.feedback.answers.length).toFixed(1)}
-                        </div>
-                    </td>
-                    <td className="px-8 py-4">
-                        <p className="text-sm font-bold text-slate-600">
-                            {s.feedback.submittedAt ? new Date(s.feedback.submittedAt).toLocaleDateString() : 'N/A'}
-                        </p>
-                        <p className="text-[10px] text-slate-400 font-mono">
-                            {s.feedback.submittedAt ? new Date(s.feedback.submittedAt).toLocaleTimeString() : ''}
-                        </p>
-                    </td>
-                    <td className="px-8 py-4">
-                        <div className="flex gap-2 text-slate-500 text-xs italic bg-slate-50 p-3 rounded-xl">
-                            <MessageSquare size={14} className="shrink-0 mt-0.5 text-slate-300" />
-                            {s.feedback.comments || "No comments."}
-                        </div>
-                    </td>
-                </tr>
-            ))}
-        </tbody>
-    </table>
-</div>
-                    )}
-
-                    {view === 'manage-wardens' && (
-                        <div className="p-8 max-w-xl mx-auto space-y-6">
-                            <div className="text-center">
-                                <h3 className="text-2xl font-black text-slate-800 mb-2">Create Warden Access</h3>
-                                <p className="text-slate-500 text-sm">Assign a new management account to a hostel</p>
-                            </div>
-                            <div className="space-y-4">
-                                <input type="text" placeholder="Username" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500 transition-all" onChange={(e) => setNewWarden({...newWarden, username: e.target.value})} />
-                                <input type="number" placeholder="Hostel Number (e.g. 1)" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500 transition-all" onChange={(e) => setNewWarden({...newWarden, hostelId: e.target.value})} />
-                                <input type="password" placeholder="Password" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-amber-500 transition-all" onChange={(e) => setNewWarden({...newWarden, password: e.target.value})} />
-                                <button onClick={handleCreateWarden} className="w-full bg-amber-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-amber-200 hover:bg-amber-600 transition-all active:scale-[0.98]">Register Warden Account</button>
-                            </div>
-                        </div>
-                    )}
+                {/* --- TABLE CONTENT --- */}
+                <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden mb-12">
+                    <table className="w-full text-left">
+                        <thead className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
+                            <tr>
+                                <th className="px-10 py-6">Student Information</th>
+                                <th className="px-6 py-6 text-center">Avg Rating</th>
+                                <th className="px-6 py-6">Submission Status</th>
+                                <th className="px-6 py-6">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {filteredStudents.map((s, i) => (
+                                <tr key={i} className="hover:bg-slate-50/50 transition-colors group">
+                                    <td className="px-10 py-5">
+                                        <button 
+                                            onClick={() => setSelectedStudent(s)}
+                                            className="text-left group-hover:translate-x-1 transition-transform"
+                                        >
+                                            <p className="font-black text-slate-800 hover:text-indigo-600">{s.name}</p>
+                                            <p className="text-[10px] text-slate-400 font-mono mt-0.5">{s.collegeId} • Hostel {s.hostelId}</p>
+                                        </button>
+                                    </td>
+                                    <td className="px-6 py-5 text-center">
+                                        {s.feedback?.isSubmitted ? (
+                                            <div className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full font-black text-xs">
+                                                <Star size={12} fill="currentColor" />
+                                                {(s.feedback.answers.reduce((a,b)=>a+b,0)/10).toFixed(1)}
+                                            </div>
+                                        ) : <span className="text-slate-200">—</span>}
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        {s.feedback?.isSubmitted ? (
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black text-emerald-500 uppercase">Submitted</span>
+                                                <span className="text-[9px] text-slate-400 font-medium">{new Date(s.feedback.submittedAt).toLocaleString()}</span>
+                                            </div>
+                                        ) : <span className="text-[10px] font-black text-slate-300 uppercase">Pending</span>}
+                                    </td>
+                                    <td className="px-6 py-5">
+                                        <button onClick={() => setSelectedStudent(s)} className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
+                                            <FileText size={18} />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
+
+                {/* --- STUDENT DETAIL MODAL --- */}
+                {selectedStudent && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                            <div className="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                                <div>
+                                    <h2 className="text-2xl font-black text-slate-900">{selectedStudent.name}</h2>
+                                    <p className="text-slate-500 text-sm font-medium uppercase tracking-widest">{selectedStudent.collegeId}</p>
+                                </div>
+                                <button onClick={() => setSelectedStudent(null)} className="p-3 bg-white shadow-sm border rounded-2xl hover:bg-rose-50 hover:text-rose-500 transition-colors">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            
+                            <div className="p-8 space-y-8 overflow-y-auto max-h-[70vh]">
+                                {selectedStudent.feedback?.isSubmitted ? (
+                                    <>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="bg-indigo-50 p-4 rounded-3xl flex items-center gap-3">
+                                                <Calendar className="text-indigo-600" size={20} />
+                                                <div>
+                                                    <p className="text-[10px] font-black text-indigo-400 uppercase">Submitted Date</p>
+                                                    <p className="text-sm font-bold text-indigo-900">{new Date(selectedStudent.feedback.submittedAt).toLocaleDateString()}</p>
+                                                </div>
+                                            </div>
+                                            <div className="bg-emerald-50 p-4 rounded-3xl flex items-center gap-3">
+                                                <Clock className="text-emerald-600" size={20} />
+                                                <div>
+                                                    <p className="text-[10px] font-black text-emerald-400 uppercase">Submitted Time</p>
+                                                    <p className="text-sm font-bold text-emerald-900">{new Date(selectedStudent.feedback.submittedAt).toLocaleTimeString()}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] border-b pb-2">Individual Ratings</h4>
+                                            <div className="grid grid-cols-1 gap-3">
+                                                {selectedStudent.feedback.answers.map((ans, idx) => (
+                                                    <div key={idx} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                                        <span className="text-xs font-medium text-slate-600 italic">Question {idx + 1}</span>
+                                                        <div className="flex gap-1 text-amber-400">
+                                                            {[1,2,3,4,5].map(star => (
+                                                                <Star key={star} size={12} fill={ans >= star ? "currentColor" : "none"} />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] border-b pb-2">Student Comments</h4>
+                                            <div className="bg-indigo-50/30 p-5 rounded-3xl border border-indigo-100/50 flex gap-3">
+                                                <MessageSquare size={20} className="text-indigo-400 shrink-0 mt-1" />
+                                                <p className="text-sm text-slate-700 leading-relaxed italic">
+                                                    "{selectedStudent.feedback.comments || "No additional suggestions provided."}"
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-center py-20 bg-slate-50 rounded-[2rem]">
+                                        <Users className="mx-auto text-slate-200 mb-4" size={48} />
+                                        <p className="text-slate-400 font-bold">This student has not submitted feedback yet.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
