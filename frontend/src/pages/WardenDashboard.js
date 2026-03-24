@@ -245,3 +245,5 @@ const WardenDashboard = ({ hostelId, onLogout }) => {
 };
 
 export default WardenDashboard;
+
+
