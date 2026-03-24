@@ -27,11 +27,13 @@ const StudentSchema = new mongoose.Schema({
     mobile: String,
     hostelId: Number,
     otp: String, 
-    feedback: {
-        answers: { type: [Number], default: [] },
-        comments: { type: String, default: "" },
-        isSubmitted: { type: Boolean, default: false }
-    }
+    // Inside your StudentSchema in server.js
+feedback: {
+    answers: { type: [Number], default: [] },
+    comments: { type: String, default: "" },
+    isSubmitted: { type: Boolean, default: false },
+    submittedAt: { type: Date } // Add this field
+}
 });
 const Student = mongoose.model('Student', StudentSchema);
 
@@ -222,7 +224,7 @@ app.post('/api/student/submit-feedback', async (req, res) => {
         const { collegeId, answers, comments } = req.body;
         await Student.findOneAndUpdate(
             { collegeId: { $regex: new RegExp("^" + collegeId.trim() + "$", "i") } },
-            { feedback: { answers, comments, isSubmitted: true } }
+            { feedback: { answers, comments, isSubmitted: true, submittedAt: new Date() } }
         );
         res.json({ message: "Success" });
     } catch (err) { 

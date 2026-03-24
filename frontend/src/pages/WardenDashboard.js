@@ -198,40 +198,49 @@ const WardenDashboard = ({ hostelId, onLogout }) => {
                     )}
 
                     {view === 'feedback' && (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead className="bg-indigo-50/50 text-indigo-400 text-[10px] font-black uppercase tracking-widest">
-                                    <tr>
-                                        <th className="px-8 py-5">Student</th>
-                                        <th className="px-8 py-4 text-center">Average Rating</th>
-                                        <th className="px-8 py-4">Comments</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                    {filteredStudents.filter(s => s.feedback?.isSubmitted).map((s, i) => (
-                                        <tr key={i}>
-                                            <td className="px-8 py-5">
-                                                <p className="font-bold text-slate-800">{s.name}</p>
-                                                <p className="text-xs text-slate-400">{s.collegeId} (Hostel {s.hostelId})</p>
-                                            </td>
-                                            <td className="px-8 py-4">
-                                                <div className="flex items-center justify-center gap-2 bg-indigo-50 text-indigo-600 w-16 mx-auto py-1 rounded-lg font-black">
-                                                    <Star size={14} fill="currentColor" />
-                                                    {/* FIXED: Dynamic division by answers array length */}
-                                                    {(s.feedback.answers.reduce((a,b)=>a+b,0) / s.feedback.answers.length).toFixed(1)}
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-4 italic text-slate-500 text-sm">
-                                                <div className="flex gap-2">
-                                                    <MessageSquare size={16} className="shrink-0 text-slate-300 mt-1" />
-                                                    {s.feedback.comments || "No comments provided."}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        // Inside WardenDashboard.js (Feedback View Table)
+<div className="overflow-x-auto">
+    <table className="w-full text-left">
+        <thead className="bg-indigo-50/50 text-indigo-400 text-[10px] font-black uppercase tracking-widest">
+            <tr>
+                <th className="px-8 py-5">Student Details</th>
+                <th className="px-8 py-4 text-center">Avg Rating</th>
+                <th className="px-8 py-4">Submission Date & Time</th>
+                <th className="px-8 py-4">Comments</th>
+            </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-50">
+            {filteredStudents.filter(s => s.feedback?.isSubmitted).map((s, i) => (
+                <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-8 py-5">
+                        <p className="font-bold text-slate-800">{s.name}</p>
+                        <p className="text-[10px] text-slate-400 uppercase font-black">{s.collegeId}</p>
+                    </td>
+                    <td className="px-8 py-4 text-center">
+                        <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg font-black text-sm">
+                            <Star size={14} fill="currentColor" />
+                            {(s.feedback.answers.reduce((a,b)=>a+b,0) / s.feedback.answers.length).toFixed(1)}
                         </div>
+                    </td>
+                    <td className="px-8 py-4">
+                        <p className="text-sm font-bold text-slate-600">
+                            {s.feedback.submittedAt ? new Date(s.feedback.submittedAt).toLocaleDateString() : 'N/A'}
+                        </p>
+                        <p className="text-[10px] text-slate-400 font-mono">
+                            {s.feedback.submittedAt ? new Date(s.feedback.submittedAt).toLocaleTimeString() : ''}
+                        </p>
+                    </td>
+                    <td className="px-8 py-4">
+                        <div className="flex gap-2 text-slate-500 text-xs italic bg-slate-50 p-3 rounded-xl">
+                            <MessageSquare size={14} className="shrink-0 mt-0.5 text-slate-300" />
+                            {s.feedback.comments || "No comments."}
+                        </div>
+                    </td>
+                </tr>
+            ))}
+        </tbody>
+    </table>
+</div>
                     )}
 
                     {view === 'manage-wardens' && (
